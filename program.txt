@@ -1,0 +1,72 @@
+a = 0;
+b = 0;
+c = 0;
+D = 0;
+x1 = 0;
+x2 = 0;
+inf = 8;
+noroots = -1;
+
+getnum a;
+getnum b;
+getnum c;
+
+islinear = 0;
+
+func_def isLinear(par1, par2, par3)
+{
+    if (par1 == 0)
+    {
+        if (par2 == 0)
+        {
+            if (par3 == 0)
+            {
+                print inf;
+            }:
+            else
+            {
+                print noroots;
+            };
+        }:
+        else
+        {
+            print (0-1)*par3 / par2;
+        };
+        islinear = 1;
+    };
+};
+
+func_def calculateDiscriminant(par1, par2, par3)
+{
+    D = par2 * par2 - 4 * par1 * par3;
+};
+
+func_def calculateRoots(par1, par2, discr)
+{
+    if (D >= 0)
+    {
+        x1 = ((0-1) * b + D^(1 / 2)) / (2 * a);
+        x2 = ((0-1) * b - D^(1 / 2)) / (2 * a);
+    }:
+
+    else
+    {
+        x1 = -1;
+        x2 = -1;
+    };
+};
+
+func_def printRoots(root1, root2)
+{
+    print root1;
+    print root2;
+};
+
+func_call isLinear(a, b, c);
+
+if (islinear == 0)
+{
+    func_call calculateDiscriminant(a, b, c);
+    func_call calculateRoots(a, b, D);
+    func_call printRoots(x1, x2);
+};
