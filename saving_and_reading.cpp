@@ -39,21 +39,6 @@ void SaveTreeToFileRecursive(program_tree *tree, FILE *fp, node_t *node)
     
     fprintf(fp, " ( ");
 
-    ssize_t num_of_parameters = -1;
-    ssize_t num_of_definitions = -1;
-    if (node->type == FUNC_DEF_TYPE || node->type == FUNC_CALL_TYPE)
-    {
-        for (ssize_t i = 0; i < tree->functions_s.functions_size; i++)
-        {
-            if (!strcmp(tree->functions_s.functions[i].name, node->name))
-            {
-                num_of_parameters = tree->functions_s.functions[i].num_of_parameters;
-                num_of_definitions = tree->functions_s.functions[i].num_of_definitions;
-                break;
-            }
-        }
-    }
-    
     switch((int)node->type)
     {
         case (int)VAR_TYPE:
@@ -80,7 +65,6 @@ void SaveTreeToFileRecursive(program_tree *tree, FILE *fp, node_t *node)
         case (int)FUNC_CALL_TYPE:
             fprintf(fp, " \"%d\" ", (int)node->type);
             fprintf(fp, " \"%s\" ", node->name);
-            fprintf(fp, " \"%zd\" \"%zd\" ", num_of_parameters, num_of_definitions);
             break;
 
         default:
@@ -111,12 +95,6 @@ Program_Errors MakeTreeFromFile(program_tree *tree, const char *logfile_name, co
     char *position = expression;
 
     tree->num_of_el = 0;
-    tree->variables_s.variables = (variable *)calloc((size_t)NUM_OF_VARIABLES, sizeof(variable));
-    tree->variables_s.variables_size = 0;
-    tree->variables_s.variables_capacity = NUM_OF_VARIABLES;
-    tree->functions_s.functions = (function *)calloc((size_t)NUM_OF_FUNCTIONS, sizeof(function));
-    tree->functions_s.functions_size = 0;
-    tree->functions_s.functions_capacity = NUM_OF_FUNCTIONS;
     tree->file_name = logfile_name;
     tree->root = NULL;
 
@@ -230,124 +208,10 @@ Program_Errors NodeFromFileInit(program_tree *tree, char **position, node_t **no
         *position = strchr(*position, '\0') + 1;
     }
 
-    ssize_t num_of_parameters = -1;
-    ssize_t num_of_defs = -1;
-    if (type_num == (int)FUNC_DEF_TYPE || type_num == (int)FUNC_CALL_TYPE)
-    {
-        *position = strchr(*position, '"') + 1;
-        printf("*position = <%s>\n", *position);
-
-        num_of_parameters = (ssize_t)atoi(*position);
-        
-        *position = strchr(*position, '\0') + 1;
-        *position = strchr(*position, '"') + 1;
-
-        num_of_defs = (ssize_t)atoi(*position);
-
-        *position = strchr(*position, '\0') + 1;
-    }
-
-    switch(type_num)
-    {
-        case (int)VAR_TYPE:
-            NewNodeVarInitByPos(tree, node, &err);
-            break;
-
-        case (int)FUNC_DEF_TYPE:
-        case (int)FUNC_CALL_TYPE:
-            NewNodeFuncInitByPos(tree, node, num_of_parameters, num_of_defs, type_num, &err);
-            break;
-
-        default:
-            break;
-    }
-
     if ((err = CalculationTreeVerify(tree)))
         return err;
 
     return err;
-}
-
-node_t *NewNodeFuncInitByPos(program_tree *tree, node_t **node, ssize_t num_of_parameters, ssize_t num_of_defs, int type_num, Program_Errors *err)
-{
-    bool is_func = false;
-    for (ssize_t i = 0; i < tree->functions_s.functions_size; i++)
-    {
-        if (!strcmp(tree->functions_s.functions[i].name, (*node)->name))
-        {
-            free((*node)->name);
-            (*node)->name = tree->functions_s.functions[i].name;
-            is_func = true;
-            printf("func = %s\n\n\n", tree->functions_s.functions[i].name);
-            break;
-        }
-    }
-
-    if (!is_func)
-    {
-        tree->functions_s.functions[tree->functions_s.functions_size] = {num_of_parameters, strdup((*node)->name), false, num_of_defs};
-        free((*node)->name);
-        (*node)->name = tree->functions_s.functions[tree->functions_s.functions_size].name;
-        printf("func = %s\n\n\n", tree->functions_s.functions[tree->functions_s.functions_size].name);
-        tree->functions_s.functions_size++;
-    }
-
-    (type_num == (int)FUNC_DEF_TYPE) ? (*node)->type = FUNC_DEF_TYPE : (*node)->type = FUNC_CALL_TYPE;
-
-    if (tree->functions_s.functions_size >= tree->functions_s.functions_capacity - 1)
-    {
-        tree->functions_s.functions_capacity *= 2;
-        tree->functions_s.functions = (function *)realloc(tree->functions_s.functions, (size_t)tree->functions_s.functions_capacity*sizeof(function));
-
-        if (tree->functions_s.functions == NULL)
-        {
-            printf("ERROR_DURING_MEMORY_ALLOCATION in NewNodeVarInit\n");
-            *err = ERROR_DURING_MEMORY_ALLOCATION;
-        }
-    }
-
-    return *node;
-}
-
-node_t *NewNodeVarInitByPos(program_tree *tree, node_t **node, Program_Errors *err)
-{
-    bool is_var = false;
-    for (ssize_t i = 0; i < tree->variables_s.variables_size; i++)
-    {
-        if (!strcmp(tree->variables_s.variables[i].name, (*node)->name))
-        {
-            free((*node)->name);
-            (*node)->name = tree->variables_s.variables[i].name;
-            is_var = true;
-            printf("var = %s\n\n\n", tree->variables_s.variables[i].name);
-            break;
-        }
-    }
-
-    if (!is_var)
-    {
-        tree->variables_s.variables[tree->variables_s.variables_size] = {NAN, strdup((*node)->name), false};
-        free((*node)->name);
-        (*node)->name = tree->variables_s.variables[tree->variables_s.variables_size].name;
-        printf("var = %s\n\n\n", tree->variables_s.variables[tree->variables_s.variables_size].name);
-        tree->variables_s.variables_size++;
-    }
-
-    (*node)->type = VAR_TYPE;
-
-    if (tree->variables_s.variables_size >= tree->variables_s.variables_capacity - 1)
-    {
-        tree->variables_s.variables_capacity *= 2;
-        tree->variables_s.variables = (variable *)realloc(tree->variables_s.variables, (size_t)tree->variables_s.variables_capacity*sizeof(variable));
-
-        if (tree->variables_s.variables == NULL)
-        {
-            printf("ERROR_DURING_MEMORY_ALLOCATION in NewNodeVarInit\n");
-            *err = ERROR_DURING_MEMORY_ALLOCATION;
-        }
-    }
-
-    return *node;
 }
 
 void SplitIntoParts(char *tree_buffer)

@@ -35,12 +35,6 @@ Program_Errors MakeTreeFromProgram(program_tree *tree, const char *logfile_name,
     }
     
     tree->num_of_el = 0;
-    tree->variables_s.variables = (variable *)calloc((size_t)NUM_OF_VARIABLES, sizeof(variable));
-    tree->variables_s.variables_size = 0;
-    tree->variables_s.variables_capacity = NUM_OF_VARIABLES;
-    tree->functions_s.functions = (function *)calloc((size_t)NUM_OF_FUNCTIONS, sizeof(function));
-    tree->functions_s.functions_size = 0;
-    tree->functions_s.functions_capacity = NUM_OF_FUNCTIONS;
     tree->file_name = logfile_name;
     
     tree->root = BuildingATree(tree, tokens, &err);
@@ -68,7 +62,7 @@ Program_Errors MakeTokensBuffer(tokens_t *tokens, char **expression)
     if (tokens->tokens_buffer == NULL)
     {
         printf("ERROR_DURING_MEMORY_ALLOCATION during creating a tokens_buffer");
-        err = ERROR_DURING_MEMORY_ALLOCATION;
+        return ERROR_DURING_MEMORY_ALLOCATION;
     }
 
     tokens->tokens_capacity = NUM_OF_TOKENS;

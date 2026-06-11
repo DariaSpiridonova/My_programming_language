@@ -103,7 +103,7 @@ static node_t *GetOp(program_tree *tree, tokens_t tokens, Program_Errors *err, s
             val2 = GetA(tree, tokens, err, token_num);
         }
 
-        val = NewNodeStringInit(tree, sem, val, val2, err);
+        val = InitNewNode(tree, sem, val, val2, err);
     }
 
     return val;
@@ -128,13 +128,13 @@ static node_t *PerfomFunc(program_tree *tree, tokens_t tokens, Program_Errors *e
                 comma = tokens.tokens_buffer[*token_num];
                 (*token_num)++;
                 var1 = GetV(tree, tokens, err, token_num);
-                var = NewNodeStringInit(tree, comma, var, var1, err);
+                var = InitNewNode(tree, comma, var, var1, err);
             }
         }
         if (tokens.tokens_buffer[*token_num].type == PAR_TYPE && tokens.tokens_buffer[*token_num].number == ROUND_PAR_CLOSE)
         {
             (*token_num)++;
-            var = NewNodeFuncInit(tree, func, NULL, var, err, 0);
+            var = InitNewNode(tree, func, var, NULL, err);
         }
         else 
         {
@@ -155,7 +155,6 @@ static node_t *GetFuncDef(program_tree *tree, tokens_t tokens, Program_Errors *e
 {
     node_t *param = NULL;
     node_t *param1 = NULL;
-    ssize_t num_of_params = 0;
     token_t comma;
 
     token_t func = tokens.tokens_buffer[*token_num];
@@ -166,14 +165,12 @@ static node_t *GetFuncDef(program_tree *tree, tokens_t tokens, Program_Errors *e
         if (tokens.tokens_buffer[*token_num].type != PAR_TYPE)
         {
             param = GetV(tree, tokens, err, token_num);
-            num_of_params++;
             while (tokens.tokens_buffer[*token_num].type == COMMA_TYPE)
             {
                 comma = tokens.tokens_buffer[*token_num];
                 (*token_num)++;
                 param1 = GetV(tree, tokens, err, token_num);
-                num_of_params++;
-                param = NewNodeStringInit(tree, comma, param1, param, err);
+                param = InitNewNode(tree, comma, param, param1, err);
             }
         }
         if (tokens.tokens_buffer[*token_num].type == PAR_TYPE && tokens.tokens_buffer[*token_num].number == ROUND_PAR_CLOSE)
@@ -197,7 +194,7 @@ static node_t *GetFuncDef(program_tree *tree, tokens_t tokens, Program_Errors *e
                 if (tokens.tokens_buffer[*token_num].type == PAR_TYPE && tokens.tokens_buffer[*token_num].number == FIGURE_PAR_CLOSE)
                 {
                     (*token_num)++;
-                    param = NewNodeFuncInit(tree, func, param, param1, err, num_of_params);
+                    param = InitNewNode(tree, func, param, param1, err);
                 }
                 else
                 {
@@ -238,7 +235,7 @@ static node_t *GetCommand(program_tree *tree, tokens_t tokens, Program_Errors *e
     else    
         val = GetV(tree, tokens, err, token_num);
     
-    val = NewNodeStringInit(tree, command, NULL, val, err);
+    val = InitNewNode(tree, command, NULL, val, err);
 
     return val;
 }
@@ -291,7 +288,7 @@ static node_t *GetCond(program_tree *tree, tokens_t tokens, Program_Errors *err,
             num_of_else++;
             val1 = GetCondBody(tree, tokens, err, token_num, NULL, condition);
         }
-        val = NewNodeStringInit(tree, colon, val, val1, err);
+        val = InitNewNode(tree, colon, val, val1, err);
     }
     
     return val;
@@ -349,7 +346,7 @@ static node_t *GetCondBody(program_tree *tree, tokens_t tokens, Program_Errors *
         if (tokens.tokens_buffer[*token_num].type == PAR_TYPE && tokens.tokens_buffer[*token_num].number == (int)FIGURE_PAR_CLOSE)
         {
             (*token_num)++;
-            val = NewNodeStringInit(tree, condition, val1, val2, err);
+            val = InitNewNode(tree, condition, val1, val2, err);
         }
         else
         {
@@ -379,11 +376,7 @@ static node_t *GetA(program_tree *tree, tokens_t tokens, Program_Errors *err, ss
         token_t assign = tokens.tokens_buffer[*token_num];
         (*token_num)++;
         val2 = GetD(tree, tokens, err, token_num);
-        if (val2->type == NUM_TYPE)
-        {
-            val->var.value = val2->number;
-        }
-        val = NewNodeStringInit(tree, assign, val, val2, err);
+        val = InitNewNode(tree, assign, val, val2, err);
     }
 
     else 
@@ -406,7 +399,7 @@ static node_t *GetD(program_tree *tree, tokens_t tokens, Program_Errors *err, ss
         token_t symbol = tokens.tokens_buffer[*token_num];
         (*token_num)++;
         val2 = GetE(tree, tokens, err, token_num);
-        val = NewNodeStringInit(tree, symbol, val, val2, err);
+        val = InitNewNode(tree, symbol, val, val2, err);
     }
 
     return val;
@@ -420,7 +413,7 @@ static node_t *GetE(program_tree *tree, tokens_t tokens, Program_Errors *err, ss
         token_t sign = tokens.tokens_buffer[*token_num];
         (*token_num)++;
         node_t *val2 = GetT(tree, tokens, err, token_num);
-        val = NewNodeStringInit(tree, sign, val, val2, err);
+        val = InitNewNode(tree, sign, val, val2, err);
     }
 
     return val;
@@ -434,7 +427,7 @@ static node_t *GetT(program_tree *tree, tokens_t tokens, Program_Errors *err, ss
         token_t sign = tokens.tokens_buffer[*token_num];
         (*token_num)++;
         node_t *val2 = GetDeg(tree, tokens, err, token_num);
-        val = NewNodeStringInit(tree, sign, val, val2, err);
+        val = InitNewNode(tree, sign, val, val2, err);
     }
 
     return val;
@@ -448,7 +441,7 @@ static node_t *GetDeg(program_tree *tree, tokens_t tokens, Program_Errors *err, 
         token_t sign = tokens.tokens_buffer[*token_num];
         (*token_num)++;
         node_t *val2 = GetP(tree, tokens, err, token_num);
-        val = NewNodeStringInit(tree, sign, val, val2, err);
+        val = InitNewNode(tree, sign, val, val2, err);
     }
 
     return val;
@@ -490,7 +483,7 @@ static node_t *GetN(program_tree *tree, tokens_t tokens, Program_Errors *err, ss
     token_t val = tokens.tokens_buffer[*token_num];
     (*token_num)++;
 
-    return NewNodeNumInit(tree, val, NULL, NULL, err);
+    return InitNewNode(tree, val, NULL, NULL, err);
 }
 
 static node_t *GetF(program_tree *tree, tokens_t tokens, Program_Errors *err, ssize_t *token_num)
@@ -520,7 +513,7 @@ static node_t *GetF(program_tree *tree, tokens_t tokens, Program_Errors *err, ss
     }
 
     if (val != NULL)
-        return NewNodeStringInit(tree, func, NULL, val, err);
+        return InitNewNode(tree, func, NULL, val, err);
 
     else    
     {
@@ -536,22 +529,7 @@ static node_t *GetV(program_tree *tree, tokens_t tokens, Program_Errors *err, ss
     token_t var = tokens.tokens_buffer[*token_num];
     (*token_num)++;
 
-    return NewNodeVarInit(tree, var, NULL, NULL, err);
-}
-
-node_t *NewNodeStringInit(program_tree *tree, token_t token, node_t *node_left, node_t *node_right, Program_Errors *err)
-{
-    node_t *node = InitNewNode(tree, token, node_left, node_right, err);
-
-    return node;
-}
-
-node_t *NewNodeNumInit(program_tree *tree, token_t token, node_t *node_left, node_t *node_right, Program_Errors *err)
-{
-    node_t *node = InitNewNode(tree, token, node_left, node_right, err);
-
-    node->name = strdup(token.name);
-    return node;
+    return InitNewNode(tree, var, NULL, NULL, err);
 }
 
 node_t *InitNewNode(program_tree *tree, token_t token, node_t *node_left, node_t *node_right, Program_Errors *err)
@@ -573,98 +551,14 @@ node_t *InitNewNode(program_tree *tree, token_t token, node_t *node_left, node_t
     node->type = token.type;
     if (node->type != NUM_TYPE && node->type != VAR_TYPE && node->type != FUNC_DEF_TYPE && node->type != FUNC_CALL_TYPE)
         node->name = (char *)array_of_structures_info[(int)node->type].buffer[node->number];
+    else    
+        node->name = strdup(token.name);
 
     if (node_left != NULL)
-    {
         node->left->parent = node;
-    }
 
     if (node_right != NULL)
-    {
         node->right->parent = node;
-    }
-
-    return node;
-}
-
-node_t *NewNodeVarInit(program_tree *tree, token_t token, node_t *node_left, node_t *node_right, Program_Errors *err)
-{
-    node_t *node = InitNewNode(tree, token, node_left, node_right, err);
-
-    bool is_var = false;
-    for (ssize_t i = 0; i < tree->variables_s.variables_size; i++)
-    {
-        if (!strcmp(tree->variables_s.variables[i].name, token.name))
-        {
-            node->name = tree->variables_s.variables[i].name;
-            is_var = true;
-            break;
-        }
-    }
-
-    if (!is_var)
-    {
-        tree->variables_s.variables[tree->variables_s.variables_size] = {NAN, strdup(token.name), false};
-        node->name = tree->variables_s.variables[tree->variables_s.variables_size].name;
-        tree->variables_s.variables_size++;
-    }
-
-    if (tree->variables_s.variables_size >= tree->variables_s.variables_capacity - 1)
-    {
-        tree->variables_s.variables_capacity *= 2;
-        tree->variables_s.variables = (variable *)realloc(tree->variables_s.variables, (size_t)tree->variables_s.variables_capacity*sizeof(variable));
-
-        if (tree->variables_s.variables == NULL)
-        {
-            printf("ERROR_DURING_MEMORY_ALLOCATION in NewNodeVarInit\n");
-            *err = ERROR_DURING_MEMORY_ALLOCATION;
-        }
-    }
-
-    return node;
-}
-
-node_t *NewNodeFuncInit(program_tree *tree, token_t token, node_t *node_left, node_t *node_right, Program_Errors *err, ssize_t num_of_parameters)
-{
-    node_t *node = InitNewNode(tree, token, node_left, node_right, err);
-
-    bool is_func = false;
-    for (ssize_t i = 0; i < tree->functions_s.functions_size; i++)
-    {
-        if (!strcmp(tree->functions_s.functions[i].name, token.name))
-        {
-            node->name = tree->functions_s.functions[i].name;
-            if (token.type == FUNC_DEF_TYPE)
-            {
-                tree->functions_s.functions[i].num_of_parameters = num_of_parameters;
-                tree->functions_s.functions[i].num_of_definitions = 1;
-            }
-            is_func = true;
-            break;
-        }
-    }
-
-    if (!is_func)
-    {
-        (token.type == FUNC_DEF_TYPE) ?
-            tree->functions_s.functions[tree->functions_s.functions_size] = {num_of_parameters, strdup(token.name), false, 1}
-        :
-            tree->functions_s.functions[tree->functions_s.functions_size] = {-1, strdup(token.name), false, 0};
-        node->name = tree->functions_s.functions[tree->functions_s.functions_size].name;
-        tree->functions_s.functions_size++;
-    }
-
-    if (tree->functions_s.functions_size >= tree->functions_s.functions_capacity - 1)
-    {
-        tree->functions_s.functions_capacity *= 2;
-        tree->functions_s.functions = (function *)realloc(tree->functions_s.functions, (size_t)tree->functions_s.functions_capacity*sizeof(function));
-
-        if (tree->functions_s.functions == NULL)
-        {
-            printf("ERROR_DURING_MEMORY_ALLOCATION in NewNodeVarInit\n");
-            *err = ERROR_DURING_MEMORY_ALLOCATION;
-        }
-    }
 
     return node;
 }

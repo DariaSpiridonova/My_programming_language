@@ -1,7 +1,205 @@
 #include "tokens.h"
 #include "root_functions.h"
 
-Program_Errors  CalculationTreeVerify(program_tree  *tree)
+void RunSemanticAnalysis(SymbolTable *sym_table, node_t *node)
+{
+    if (node == NULL)
+        return;
+
+    switch(node->type)
+    {
+        case FUNC_DEF_TYPE:
+            sym_table->current_function = AddFunctionToSymbolTable(sym_table, node);
+        
+            sym_table->current_stack_pointer = -8; 
+
+            // passing through the left subtree - registration of parameters
+            AnalyzeParameters(sym_table, node->left);
+
+            // passing through the right subtree — analyzing the function body
+            RunSemanticAnalysis(sym_table, node->right);
+
+            // moving out of the context of the function
+            sym_table->current_function = NULL;
+            return;
+
+        case VAR_TYPE:
+            AddVariableToSymbolTable(sym_table, node, false, false);
+            return;
+
+        default:
+            break;
+        
+    }
+
+    RunSemanticAnalysis(sym_table, node->left);
+    RunSemanticAnalysis(sym_table, node->right); 
+
+    return;
+}
+
+sem_func_t *AddFunctionToSymbolTable(SymbolTable *sym_table, node_t *node)
+{
+    for (size_t i = 0; i < sym_table->func_count; i++)
+    {
+        if (!strcmp(sym_table->functions[i].node->name, node->name))
+        {
+            if (++sym_table->functions[i].num_of_definitions > 1)
+            {
+                fprintf(stderr, "Redefinition of the %s function\n", node->name);
+                exit(1);
+            }
+            return &sym_table->functions[i];
+        }
+    }
+
+    if (sym_table->func_count >= sym_table->func_capacity) 
+    {
+        sym_table->func_capacity *= 2;
+        sym_table->functions = (sem_func_t *)realloc(sym_table->functions, sym_table->func_capacity * sizeof(sem_func_t));
+        if (sym_table->functions == NULL)
+        {
+            fprintf(stderr, "An error occured during memory allocation\n");
+            exit(-1);
+        }
+    }
+
+    sem_func_t *curr_func = &sym_table->functions[sym_table->func_count++];
+    curr_func->node = node;
+    curr_func->num_of_parameters = 0;
+    curr_func->num_of_definitions = 1;
+    curr_func->local_capacity = 16;
+    curr_func->locals = (sem_var_t *)calloc(curr_func->local_capacity, sizeof(sem_var_t));
+
+    curr_func->local_count = 0;
+    if (curr_func->locals == NULL)
+    {
+        free(sym_table->functions);
+        fprintf(stderr, "An error occured during memory allocation\n");
+        exit(-2);
+    }
+
+    return curr_func;
+}
+
+void AnalyzeParameters(SymbolTable *sym_table, node_t *node)
+{
+    if (node == NULL)
+        return;
+
+    AnalyzeParameters(sym_table, node->left);
+    AnalyzeParameters(sym_table, node->right);
+
+    if (node->type == VAR_TYPE)
+        AddVariableToSymbolTable(sym_table, node, true, true);
+
+    return;
+}
+
+void AddVariableToSymbolTable(SymbolTable *sym_table, node_t *node, bool is_param, bool check_params)
+{
+    if (sym_table->current_function == NULL)
+    {
+        for (size_t i = 0; i < sym_table->globals_count; i++)
+        {
+            if (!strcmp(sym_table->globals[i].name, node->name))
+                return;
+        }
+        
+        sym_table->globals[sym_table->globals_count++].name = node->name;
+        return;
+    }
+
+    sem_func_t *current_func = sym_table->current_function;
+
+    for (size_t i = 0; i < current_func->local_count; i++)
+    {
+        if (!strcmp(current_func->locals[i].name, node->name))
+        {
+            if (check_params)
+            {
+                fprintf(stderr, "redefinition of parameter '%s' inside definition of function '%s')", node->name, sym_table->current_function->node->name);
+                exit(2);
+            }
+            node->stack_offset = current_func->locals[i].stack_offset;
+            return;
+        }
+    }
+    if (CheckVariablesCapacity(current_func->local_count, current_func->local_capacity, current_func->locals) == NULL ||
+        CheckVariablesCapacity(sym_table->globals_count, sym_table->globals_capacity,   sym_table->globals)   == NULL)
+    {
+        fprintf(stderr, "memory allocate error");
+        exit(2);
+    }
+
+    sym_table->current_stack_pointer -= 8;
+
+    sem_var_t *curr_var = &current_func->locals[current_func->local_count++];
+
+    curr_var->name = node->name; // !!!!!! NO MEMORY ALLOCATE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    curr_var->stack_offset = sym_table->current_stack_pointer;
+    node->stack_offset = sym_table->current_stack_pointer;
+
+    curr_var->is_parameter = is_param ? true : false;
+
+    return;
+}
+
+sem_var_t *CheckVariablesCapacity(size_t var_count, size_t var_capacity, sem_var_t *var_buffer)
+{
+    if (var_count >= var_capacity)
+    {
+        var_capacity *= 2;
+        var_buffer = (sem_var_t *)realloc(var_buffer, var_capacity * sizeof(sem_var_t));
+        if (var_buffer == NULL)
+        {
+            fprintf(stderr, "memory allocate error");
+            exit(3);
+        }
+    }
+
+    return var_buffer;
+}
+
+Program_Errors SymbolTableInit(SymbolTable *sym_table)
+{
+    assert(sym_table != NULL);
+    
+    if (sym_table == NULL) 
+        return ERROR_DURING_MEMORY_ALLOCATION;
+
+    sym_table->func_capacity = 16;
+    sym_table->functions     = (sem_func_t *)calloc(sym_table->func_capacity, sizeof(sem_func_t));
+    sym_table->func_count    = 0;
+    
+    sym_table->globals_capacity = 32;
+    sym_table->globals          = (sem_var_t *)calloc(sym_table->globals_capacity, sizeof(sem_var_t));
+    sym_table->globals_count    = 0;
+
+    if (sym_table->functions == NULL || sym_table->globals == NULL) 
+        return ERROR_DURING_MEMORY_ALLOCATION;
+    
+    sym_table->current_function      = NULL;
+    sym_table->current_stack_pointer = -8;
+
+    return NO_ERROR;
+}
+
+void SymbolTableDestroy(SymbolTable *sym_table)
+{
+    assert(sym_table != NULL);
+
+    for (size_t i = 0; i < sym_table->func_count; i++)
+        free(sym_table->functions[i].locals);
+
+    free(sym_table->functions);
+
+    free(sym_table->globals);
+
+    return;
+}
+
+Program_Errors CalculationTreeVerify(program_tree *tree)
 {
     if (tree == NULL) return NULL_POINTER_ON_TREE;
     else if (tree->num_of_el < 0) return NEGATIVE_NUM_OF_ELEMENTS;
@@ -66,20 +264,6 @@ Program_Errors  CalculationTreeDestroy(program_tree  *tree)
     Program_Errors  err = NO_ERROR;
     err = CalculationTreeDestroyRecursive(tree, &(tree->root));
 
-    for (ssize_t i = 0; i < tree->variables_s.variables_size; i++)
-    {
-        printf("%zd: %s\n", i, tree->variables_s.variables[i].name);
-        free(tree->variables_s.variables[i].name);
-    }
-    free(tree->variables_s.variables);
-
-    for (ssize_t i = 0; i < tree->functions_s.functions_size; i++)
-    {
-        printf("%zd: %s\n", i, tree->functions_s.functions[i].name);
-        free(tree->functions_s.functions[i].name);
-    }
-    free(tree->functions_s.functions);
-
     return err;
 }
 
@@ -103,7 +287,7 @@ Program_Errors  CalculationTreeDestroyRecursive(program_tree  *tree, node_t  **n
     CalculationTreeDestroyRecursive(tree, &((*node)->left));
     CalculationTreeDestroyRecursive(tree, &((*node)->right));
 
-    if ((*node)->type == NUM_TYPE)
+    if ((*node)->type == NUM_TYPE || (*node)->type == VAR_TYPE || (*node)->type == FUNC_CALL_TYPE || (*node)->type == FUNC_DEF_TYPE)
         free((*node)->name);
     free(*node);
     tree->num_of_el--;
@@ -159,24 +343,6 @@ void Dump(FILE *fp, const program_tree  *tree, ssize_t *rank)
     fprintf(fp, "TREE[%p]\n", tree);
     fprintf(fp, "  |  \n");
     fprintf(fp, "ROOT[%p]\n", tree->root);
-    fprintf(fp, "BUFFER_WITH_VARIABLES[%p]\n", tree->variables_s.variables);
-    fprintf(fp, "{\n");
-    fprintf(fp, "    num_of_el_in_the_tree = %zd\n", tree->num_of_el);
-    fprintf(fp, "    buffer_with_variables_size = %zd\n", tree->variables_s.variables_size);
-    fprintf(fp, "    buffer_with_variables_capacity = %zd\n", tree->variables_s.variables_capacity);
-    fprintf(fp, "    Buffer with variables content:\n");
-    for (ssize_t i = 0; i < tree->variables_s.variables_size; i++)
-    {
-        printf("        [%zd]  %s\n", i, tree->variables_s.variables[i].name);
-    }
-    fprintf(fp, "    Buffer with functions content:\n");
-    for (ssize_t i = 0; i < tree->functions_s.functions_size; i++)
-    {
-        printf("        [%zd]  %s:\n", i, tree->functions_s.functions[i].name);
-        printf("               num_of_definitions = %zd\n", tree->functions_s.functions[i].num_of_definitions);
-        printf("               is_return_value    =  %s\n", tree->functions_s.functions[i].is_return_value ? "true" : "false");
-        printf("               num_of_parameters  = %zd\n", tree->functions_s.functions[i].num_of_parameters);
-    }
     fprintf(fp, "    Tree content:\n");
 
     ssize_t cur_rank = 0;

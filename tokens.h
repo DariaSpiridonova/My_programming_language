@@ -199,21 +199,6 @@ enum symbol_t
     JBE
 };
 
-typedef struct 
-{
-    double value;
-    char *name;
-    bool is_value;
-    bool is_global;
-} variable;
-
-union value_type
-{
-    double number;
-    variable var;
-    operation_t operation;
-};
-
 typedef struct
 {
     type_t type;
@@ -230,42 +215,51 @@ typedef struct
 
 typedef struct 
 {
-    variable *variables;
-    ssize_t variables_size;
-    ssize_t variables_capacity;
-} variables_t;
+    char *name;          
+    int stack_offset;    
+    bool is_parameter;   
+} sem_var_t;
 
-typedef struct 
-{
-    ssize_t num_of_parameters;
-    char *name;
-    bool is_return_value;
-    ssize_t num_of_definitions = 0;
-} function;
-
-typedef struct 
-{
-    function *functions;
-    ssize_t functions_size;
-    ssize_t functions_capacity;
-} functions_t;
-
-typedef struct node_t
+typedef struct node_s 
 {
     type_t type;
     char *name;
-    variable var;
-    int number;    
-    struct node_t *left;
-    struct node_t *right;
-    struct node_t *parent;
+    int number;            
+    int stack_offset;      
+    struct node_s *left;
+    struct node_s *right;
+    struct node_s *parent;
 } node_t;
+
+typedef struct 
+{
+    node_t *node;                
+    size_t num_of_parameters;    
+    size_t num_of_definitions;   
+    
+    sem_var_t *locals;
+    size_t local_count;
+    size_t local_capacity;
+} sem_func_t;
+
+
+typedef struct 
+{
+    sem_func_t *functions;
+    size_t func_count;
+    size_t func_capacity;
+
+    sem_var_t *globals;
+    size_t globals_count;
+    size_t globals_capacity;
+
+    sem_func_t *current_function; 
+    int current_stack_pointer;    
+} SymbolTable;
 
 typedef struct
 {
     ssize_t num_of_el;
-    variables_t variables_s;
-    functions_t functions_s;
     node_t *root;
     const char *file_name;
 } program_tree;
@@ -295,10 +289,17 @@ enum Program_Errors
     EMPTY_FUNC_ARG,
     ABSENCE_ASSIGN,
     ABSENCE_PARAMS,
-    ABSENCE_RIGHT_PARAM
+    ABSENCE_RIGHT_PARAM,
+    FUNCTION_REDEFINING
 };
 
-Program_Errors MakeTreeFromProgram(program_tree *tree, const char *logfile_name, const char *name_of_file_with_tokens);
+// ******************* PROGRAM FILE READING FUNCTIONS *******************
+
+char *ReadExpressionFromFile(const char *name_of_file, Program_Errors *err);
+size_t return_num_of_bytes_in_file(int fd1);
+
+// ******************* TOKEN FUNCTIONS *******************
+
 Program_Errors MakeTokensBuffer(tokens_t *tokens, char **expression);
 void DestroyTokensBuffer(tokens_t *tokens);
 void NeccesaryExpansion(tokens_t *tokens);
@@ -310,27 +311,31 @@ void MakeCompOrAssignToken(tokens_t *tokens, char **expression, bool is_equal);
 void MakeNumToken(tokens_t *tokens, char **expression);
 void MakeVarToken(tokens_t *tokens, char **expression);
 
-Program_Errors SaveTreeToFile(program_tree *tree, const char *name_of_file);
-void SaveTreeToFileRecursive(program_tree *tree, FILE *fp, node_t *node);
+// ******************* TREE BUILDING FUNCTIONS *******************
+
+Program_Errors MakeTreeFromProgram(program_tree *tree, const char *logfile_name, const char *name_of_file_with_tokens);
+node_t *BuildingATree(program_tree *tree, tokens_t tokens, Program_Errors *err);
+node_t *GetG(program_tree *tree, tokens_t tokens, Program_Errors *err);
 
 Program_Errors MakeTreeFromFile(program_tree *tree, const char *logfile_name, const char *name_of_file);
 void SplitIntoParts(char *tree_buffer);
-
 char *ReadNodeFromBuffer(program_tree *tree, char **position, node_t **node, node_t *parent);
 Program_Errors NodeFromFileInit(program_tree *tree, char **position, node_t **node, node_t *parent);
-node_t *NewNodeVarInitByPos(program_tree *tree, node_t **node, Program_Errors *err);
-node_t *NewNodeFuncInitByPos(program_tree *tree, node_t **node, ssize_t num_of_parameters, ssize_t num_of_defs, int type_num, Program_Errors *err);
-
-node_t *GetG(program_tree *tree, tokens_t tokens, Program_Errors *err);
-
 node_t *InitNewNode(program_tree *tree, token_t token, node_t *node_left, node_t *node_right, Program_Errors *err);
-node_t *NewNodeVarInit(program_tree *tree, token_t token, node_t *node_left, node_t *node_right, Program_Errors *err);
-node_t *NewNodeStringInit(program_tree *tree, token_t token, node_t *node_left, node_t *node_right, Program_Errors *err);
-node_t *NewNodeNumInit(program_tree *tree, token_t token, node_t *node_left, node_t *node_right, Program_Errors *err);
-node_t *NewNodeFuncInit(program_tree *tree, token_t token, node_t *node_left, node_t *node_right, Program_Errors *err, ssize_t num_of_parameters);
 
-char *ReadExpressionFromFile(const char *name_of_file, Program_Errors *err);
-size_t return_num_of_bytes_in_file(int fd1);
-node_t *BuildingATree(program_tree *tree, tokens_t tokens, Program_Errors *err);
+// ******************* TREE SAVING FUNCTIONS *******************
+
+Program_Errors SaveTreeToFile(program_tree *tree, const char *name_of_file);
+void SaveTreeToFileRecursive(program_tree *tree, FILE *fp, node_t *node);
+
+// ******************* SEMANTIC ANALYSIS FUNCTIONS *******************
+
+void RunSemanticAnalysis(SymbolTable *sym_table, node_t *node);
+Program_Errors SymbolTableInit(SymbolTable *sym_table);
+void SymbolTableDestroy(SymbolTable *sym_table);
+void AddVariableToSymbolTable(SymbolTable *sym_table, node_t *node, bool is_param, bool check_params);
+sem_var_t *CheckVariablesCapacity(size_t var_count, size_t var_capacity, sem_var_t *var_buffer);
+void AnalyzeParameters(SymbolTable *sym_table, node_t *node);
+sem_func_t *AddFunctionToSymbolTable(SymbolTable *sym_table, node_t *node);
 
 #endif
