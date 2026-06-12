@@ -164,7 +164,7 @@ sem_var_t *CheckVariablesCapacity(size_t var_count, size_t var_capacity, sem_var
 Program_Errors SymbolTableInit(SymbolTable *sym_table)
 {
     assert(sym_table != NULL);
-    
+
     if (sym_table == NULL) 
         return ERROR_DURING_MEMORY_ALLOCATION;
 
@@ -452,7 +452,7 @@ const char *ChooseColor(node_t  *node)
             return "hotpink";
 
         case COMM_TYPE:
-            return "deeppink";
+            return (node->number == STOP) ? "red" : "deeppink";
 
         case VAR_TYPE:
             return "violet";

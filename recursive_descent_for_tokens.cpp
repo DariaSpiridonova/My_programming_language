@@ -230,11 +230,24 @@ static node_t *GetCommand(program_tree *tree, tokens_t tokens, Program_Errors *e
     token_t command = tokens.tokens_buffer[*token_num];
     (*token_num)++;
 
-    if (command.number == (int)PRINT)
-        val = GetD(tree, tokens, err, token_num);
-    else    
-        val = GetV(tree, tokens, err, token_num);
-    
+    switch (command.number)
+    {
+        case PRINT:
+            val = GetD(tree, tokens, err, token_num);
+            break;
+
+        case GETNUM:
+            val = GetV(tree, tokens, err, token_num);
+            break;
+
+        case STOP:
+            break;
+
+        default:
+            perror("incorrect command\n");
+            exit(-1);
+    }
+
     val = InitNewNode(tree, command, NULL, val, err);
 
     return val;

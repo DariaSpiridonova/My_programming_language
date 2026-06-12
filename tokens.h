@@ -35,11 +35,11 @@ const ssize_t NUM_OF_OPERATIONS = 6;
 const ssize_t NUM_OF_SYMBOLS = 7;
 const ssize_t NUM_OF_TOKENS = 30;
 const ssize_t LEN_OF_SIGNES_ARRAY = 8;
-const ssize_t LEN_OF_KEY_WORDS_ARRAY = 6;
+const ssize_t LEN_OF_KEY_WORDS_ARRAY = 7;
 const ssize_t LEN_OF_FUNCS_COMMANDS = 3;
 const ssize_t NUM_OF_PARS = 5;
 const ssize_t NUM_OF_CONDS = 5;
-const ssize_t NUM_OF_IO = 3;
+const ssize_t NUM_OF_IO = 4;
 const ssize_t NUM_OF_DELIMITERS = 4;
 
 const char link_to_graphviz_file[] = "../Graphviz/program_tree_";
@@ -89,6 +89,7 @@ const types array_of_key_words[LEN_OF_KEY_WORDS_ARRAY] =
     {"while", COND_TYPE},
     {"getnum", COMM_TYPE},
     {"print", COMM_TYPE},
+    {"stop", COMM_TYPE},
 };
 
 const char * const array_of_funcs_commands[LEN_OF_FUNCS_COMMANDS] = {"\0", "func_def", "func_call"};
@@ -101,7 +102,7 @@ const char * const compare_asm_symbols[NUM_OF_SYMBOLS] = {"\0", "JE", "JNE", "JA
 const char * const assign_buffer[NUM_OF_SYMBOLS] = {"\0", "="};
 const char * const operations_buffer[NUM_OF_OPERATIONS] = {"\0", "log", "sin", "cos", "tg", "ctg"}; // OP_TYPE
 const char * const symbols_in_words[NUM_OF_SYMBOLS] = {"\0", "==", "&jt;", "&lt;", "&ge;", "&le;"};
-const char * const io_buffer[NUM_OF_IO] = {"\0", "getnum", "print"};
+const char * const io_buffer[NUM_OF_IO] = {"\0", "getnum", "print", "stop"};
 const char * const conditions_buffer[NUM_OF_CONDS] = {"\0", "if", "elif", "else", "while"};
 
 struct buffer_info
@@ -151,11 +152,12 @@ enum delimiters_t
     COMMA
 };
 
-enum input_output_t 
+enum input_output_stop_t 
 {
     NO_COM,
     GETNUM,
-    PRINT
+    PRINT,
+    STOP
 };
 
 enum condition_t
