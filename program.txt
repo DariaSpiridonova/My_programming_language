@@ -11,8 +11,6 @@ getnum a;
 getnum b;
 getnum c;
 
-stop;
-
 islinear = 0;
 
 func_def isLinear(par1, par2, par3)

@@ -3,6 +3,7 @@
 
 #include "tokens.h"
 
+void PrintSymbolTable(SymbolTable *sym_table);
 Program_Errors CalculationTreeVerify(program_tree *tree);
 bool CheckSonsAndParents(node_t *node, node_t **son, node_t **parent);
 void CheckSonsAndParentsRecursive(node_t *node, bool *flag, node_t **son, node_t **parent);

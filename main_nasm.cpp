@@ -1,6 +1,6 @@
 #include "tokens.h"
 #include "root_functions.h"
-#include "asm_transcription.h"
+#include "nasm_generation.h"
 
 int main()
 {
@@ -38,12 +38,13 @@ int main()
     }
     
     RunSemanticAnalysis(&sym_table, program_tree_.root);
+    PrintSymbolTable(&sym_table);
     
-    // if ((err = GenerateNasmCode(&program_tree_, &sym_table, "program_nasm.asm")))
-    // {
-    //     PrintError(err);
-    //     return 4;
-    // }
+    if ((err = GenerateNasmCode(&program_tree_, &sym_table, "program_nasm.asm")))
+    {
+        PrintError(err);
+        return 4;
+    }
 
     SymbolTableDestroy(&sym_table);
 
@@ -61,7 +62,12 @@ int main()
         return 6;
     }
 
-    // system("./program_nasm.asm");
+    system("nasm -f elf64 stdlib.asm -o stdlib.o");
+    system("nasm -f elf64 math_lib.asm -o math_lib.o");
+    system("ar rcs libmynasm.a stdlib.o math_lib.o");
+    system("nasm -f elf64 program_nasm.asm -o program_nasm.o");
+    system("g++ -no-pie program_nasm.o -L. -lmynasm -o program_nasm");
+    system("./program_nasm");
     
     return 0;
 }

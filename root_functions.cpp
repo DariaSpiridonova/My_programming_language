@@ -1,6 +1,33 @@
 #include "tokens.h"
 #include "root_functions.h"
 
+void PrintSymbolTable(SymbolTable *sym_table)
+{
+    printf("func_capacity = %zu\n", sym_table->func_capacity);
+    for (size_t i = 0; i < sym_table->func_count; i++)
+    {
+        printf("FUNCTION %zu: %s\n", i, sym_table->functions[i].node->name);
+        printf("    num_of_parameters = %zu\n", sym_table->functions[i].num_of_parameters);
+        printf("    local_count       = %zu\n", sym_table->functions[i].local_count);
+        printf("    LOCALS: \n");
+        for (size_t j = 0; j < sym_table->functions[i].local_count; j++)
+        {
+            printf("    name         - %s   ", sym_table->functions[i].locals[j].name);
+            printf("    stack offset - %d\n", sym_table->functions[i].locals[j].stack_offset);
+            printf("    is parameter - %s\n", (sym_table->functions[i].locals[j].is_parameter) ? "true" : "false");
+        }
+        
+    }
+
+    printf("globals_capacity = %zu\n", sym_table->globals_capacity);
+    printf("globals_count = %zu\n", sym_table->globals_count);
+    for (size_t i = 0; i < sym_table->globals_count; i++)
+    {
+        printf("GLOBAL %zu: %s\n", i, sym_table->globals[i].name);
+        printf("            stack offset = %d\n", sym_table->globals[i].stack_offset);
+    }
+}
+
 void RunSemanticAnalysis(SymbolTable *sym_table, node_t *node)
 {
     if (node == NULL)
@@ -10,7 +37,7 @@ void RunSemanticAnalysis(SymbolTable *sym_table, node_t *node)
     {
         case FUNC_DEF_TYPE:
             sym_table->current_function = AddFunctionToSymbolTable(sym_table, node);
-        
+            
             sym_table->current_stack_pointer = -8; 
 
             // passing through the left subtree - registration of parameters
@@ -70,15 +97,15 @@ sem_func_t *AddFunctionToSymbolTable(SymbolTable *sym_table, node_t *node)
     curr_func->num_of_definitions = 1;
     curr_func->local_capacity = 16;
     curr_func->locals = (sem_var_t *)calloc(curr_func->local_capacity, sizeof(sem_var_t));
-
-    curr_func->local_count = 0;
     if (curr_func->locals == NULL)
     {
         free(sym_table->functions);
         fprintf(stderr, "An error occured during memory allocation\n");
         exit(-2);
     }
-
+    
+    curr_func->local_count = 0;
+    
     return curr_func;
 }
 
@@ -98,15 +125,20 @@ void AnalyzeParameters(SymbolTable *sym_table, node_t *node)
 
 void AddVariableToSymbolTable(SymbolTable *sym_table, node_t *node, bool is_param, bool check_params)
 {
+    for (size_t i = 0; i < sym_table->globals_count; i++)
+    {
+        if (!strcmp(sym_table->globals[i].name, node->name))
+        {
+            printf("                    global repeat %s\n", node->name);
+            return;
+        }
+    }
+
     if (sym_table->current_function == NULL)
     {
-        for (size_t i = 0; i < sym_table->globals_count; i++)
-        {
-            if (!strcmp(sym_table->globals[i].name, node->name))
-                return;
-        }
-        
+        printf("                    global %s\n", node->name);
         sym_table->globals[sym_table->globals_count++].name = node->name;
+        node->stack_offset = 0;
         return;
     }
 
@@ -132,15 +164,22 @@ void AddVariableToSymbolTable(SymbolTable *sym_table, node_t *node, bool is_para
         exit(2);
     }
 
-    sym_table->current_stack_pointer -= 8;
-
     sem_var_t *curr_var = &current_func->locals[current_func->local_count++];
-
     curr_var->name = node->name; // !!!!!! NO MEMORY ALLOCATE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    curr_var->stack_offset = sym_table->current_stack_pointer;
-    node->stack_offset = sym_table->current_stack_pointer;
-
     curr_var->is_parameter = is_param ? true : false;
+    
+    if (is_param)
+    {
+        current_func->num_of_parameters++;
+        curr_var->stack_offset = 8 + (current_func->num_of_parameters * 8);
+    }
+    else
+    {
+        sym_table->current_stack_pointer -= 8;
+        curr_var->stack_offset = sym_table->current_stack_pointer;
+    }
+
+    node->stack_offset = curr_var->stack_offset;
 
     return;
 }

@@ -95,10 +95,10 @@ const types array_of_key_words[LEN_OF_KEY_WORDS_ARRAY] =
 const char * const array_of_funcs_commands[LEN_OF_FUNCS_COMMANDS] = {"\0", "func_def", "func_call"};
 const char * const pars_buffer[NUM_OF_PARS] = {"\0", "(", ")", "{", "}"};
 const char * const signes_buffer[NUM_OF_SIGNES] = {"\0", "+", "-", "*", "/", "^"};
-const char * const signes_asm_buffer[NUM_OF_SIGNES] = {"\0", "ADD", "SUB", "MUL", "DIV", "DEG"};
+const char * const signes_asm_buffer[NUM_OF_SIGNES] = {"\0", "add", "sub", "imul", "div", "DEG"};
 const char * const delimiters[NUM_OF_DELIMITERS] = {"\0", ";", ",", ":"};
 const char * const compare_symbols[NUM_OF_SYMBOLS] = {"\0", "==", "!=", ">", "<", ">=", "<="};
-const char * const compare_asm_symbols[NUM_OF_SYMBOLS] = {"\0", "JE", "JNE", "JA", "JB", "JAE", "JBE"};
+const char * const compare_asm_symbols[NUM_OF_SYMBOLS] = {"\0", "je", "jne", "jg", "jl", "jge", "jle"};
 const char * const assign_buffer[NUM_OF_SYMBOLS] = {"\0", "="};
 const char * const operations_buffer[NUM_OF_OPERATIONS] = {"\0", "log", "sin", "cos", "tg", "ctg"}; // OP_TYPE
 const char * const symbols_in_words[NUM_OF_SYMBOLS] = {"\0", "==", "&jt;", "&lt;", "&ge;", "&le;"};
@@ -227,7 +227,7 @@ typedef struct node_s
     type_t type;
     char *name;
     int number;            
-    int stack_offset;      
+    int stack_offset;   
     struct node_s *left;
     struct node_s *right;
     struct node_s *parent;
